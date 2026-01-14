@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Award Finder (Mock Seats.aero)</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1220">
+
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto;background:#0b1220;color:#eaf1ff}
+.wrap{max-width:1100px;margin:auto;padding:16px}
+h1{margin:0 0 10px}
+.card{background:#101a33;border-radius:14px;padding:14px;margin-bottom:12px;border:1px solid rgba(255,255,255,.1)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.row{grid-template-columns:1fr}}
+input,select,button{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:#0b1220;color:white}
+button{background:#2563eb;border:none;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px}
+th{cursor:pointer;color:#9fb3d6}
+.badge{padding:3px 7px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.2)}
+.good{background:rgba(34,197,94,.2)}
+.mid{background:rgba(245,158,11,.2)}
+.bad{background:rgba(239,68,68,.2)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px;cursor:pointer}
+.day:hover{outline:2px solid #2563eb}
+.small{font-size:12px;color:#9fb3d6}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>✈️ Award Finder (Mock Seats.aero)</h1>
+
+<div class="card">
+<div class="row">
+<div>
+<label>Origins</label>
+<input id="origins" value="LAX,SFO">
+</div>
+<div>
+<label>Destinations</label>
+<input id="dest" value="CDG,AMS">
+</div>
+</div>
+
+<div class="row">
+<div>
+<label>Start date</label>
+<input id="start" type="date">
+</div>
+<div>
+<label>End date</label>
+<input id="end" type="date">
+</div>
+</div>
+
+<div class="row">
+<div>
+<label>Cabin</label>
+<select id="cabin">
+<option>Business</option>
+<option>First</option>
+<option>Economy</option>
+</select>
+</div>
+<div>
+<label>Seats</label>
+<input id="seats" type="number" value="2">
+</div>
+</div>
+
+<div class="row">
+<div>
+<label>Max stops</label>
+<select id="stops">
+<option value="0">0</option>
+<option value="1" selected>1</option>
+<option value="2">2</option>
+</select>
+</div>
+<div>
+<label>Best per day</label>
+<select id="best">
+<option value="0">No</option>
+<option value="1">Yes</option>
+</select>
+</div>
+</div>
+
+<br>
+<button onclick="run()">Search</button>
+</div>
+
+<div class="card">
+<h3>📅 Cheapest Day Heatmap</h3>
+<div id="cal" class="cal"></div>
+</div>
+
+<div class="card">
+<h3>Results</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th><th>Route</th><th>Program</th><th>Miles</th><th>Taxes</th><th>Stops</th>
+</tr>
+</thead>
+<tbody id="out"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+function iso(d){return d.toISOString().slice(0,10)}
+function addDays(d,n){let x=new Date(d);x.setDate(x.getDate()+n);return x}
+
+function rand(seed){let x=seed;return ()=>{x^=x<<13;x^=x>>17;x^=x<<5;return (x>>>0)/4294967296}}
+
+function run(){
+const origins=document.getElementById("origins").value.split(",").map(s=>s.trim())
+const dest=document.getElementById("dest").value.split(",").map(s=>s.trim())
+const start=new Date(document.getElementById("start").value)
+const end=new Date(document.getElementById("end").value)
+const cabin=document.getElementById("cabin").value
+const maxStops=parseInt(document.getElementById("stops").value)
+const best=document.getElementById("best").value==="1"
+
+let base=cabin==="First"?110000:cabin==="Business"?70000:30000
+
+let results=[]
+for(let d=new Date(start);d<=end;d=addDays(d,1)){
+for(let o of origins)for(let t of dest){
+let r=rand(d.getTime()+o.charCodeAt(0)+t.charCodeAt(0))
+let stops=r()<0.5?0:1
+if(stops>maxStops) continue
+let miles=Math.round(base*(0.7+r()*0.6)/500)*500
+let taxes=Math.round((100+r()*200))
+results.push({
+date:iso(d),
+route:o+"-"+t,
+program:r()<0.5?"Aeroplan":"FlyingBlue",
+miles, taxes, stops
+})
+}}
+if(best){
+let map={}
+for(let r of results){
+if(!map[r.date]||r.miles<map[r.date].miles) map[r.date]=r
+}
+results=Object.values(map)
+}
+
+render(results,start,end)
+}
+
+function render(results,start,end){
+const tb=document.getElementById("out")
+tb.innerHTML=""
+for(let r of results){
+tb.innerHTML+=`<tr>
+<td>${r.date}</td>
+<td>${r.route}</td>
+<td>${r.program}</td>
+<td><span class="badge ${r.miles<60000?"good":r.miles<90000?"mid":"bad"}">${r.miles}</span></td>
+<td>$${r.taxes}</td>
+<td>${r.stops}</td>
+</tr>`
+}
+
+const cal=document.getElementById("cal")
+cal.innerHTML=""
+let bestByDay={}
+for(let r of results){
+if(!bestByDay[r.date]||r.miles<bestByDay[r.date].miles) bestByDay[r.date]=r
+}
+for(let d=new Date(start);d<=end;d=addDays(d,1)){
+let ds=iso(d)
+let b=bestByDay[ds]
+if(!b){
+cal.innerHTML+=`<div class="day"><div class="small">${ds}</div>—</div>`
+}else{
+let cls=b.miles<60000?"good":b.miles<90000?"mid":"bad"
+cal.innerHTML+=`<div class="day ${cls}">
+<div class="small">${ds}</div>
+<b>${b.miles}</b><div class="small">$${b.taxes}</div>
+</div>`
+}
+}
+}
+
+// defaults
+let s=new Date(); s.setDate(s.getDate()+1)
+let e=new Date(); e.setDate(e.getDate()+30)
+document.getElementById("start").value=iso(s)
+document.getElementById("end").value=iso(e)
+run()
+</script>
+</body>
+</html>
