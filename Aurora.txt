@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aurora.AI — Award Search (Single File)</title>
+  <style>
+    :root{
+      --bg:#0b0f1a; --panel:#111827; --panel2:#0f172a;
+      --text:#fff; --muted:rgba(255,255,255,.7);
+      --line:rgba(255,255,255,.10);
+      --blue:#2563eb; --gray:#374151; --green:#1b5e20; --red:#7f1d1d;
+      --radius:16px;
+    }
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+    *{box-sizing:border-box;}
+    a{color:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px;}
+    header{display:flex;align-items:baseline;gap:12px;}
+    h1{margin:0;font-size:28px;}
+    .muted{opacity:.7}
+    .card{background:var(--panel);border-radius:var(--radius);padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    .card2{background:var(--panel2);border-radius:var(--radius);padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+    label{display:block}
+    .lab{font-size:12px;opacity:.8;margin-bottom:6px;}
+    input,select,button{font:inherit;}
+    input,select{
+      width:100%; padding:10px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:var(--text);
+      outline:none;
+    }
+    input::placeholder{color:rgba(255,255,255,.45)}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    button{
+      padding:10px 14px;border-radius:12px;border:0;font-weight:800;cursor:pointer;
+      background:var(--blue);color:white;
+    }
+    button:disabled{background:var(--gray);cursor:not-allowed;}
+    .btn-ghost{
+      padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);
+      background:transparent;color:white;font-weight:700;
+    }
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:800;}
+    .b-verified{background:var(--green);}
+    .b-phantom{background:var(--red);}
+    .b-unverified{background:var(--gray);}
+    table{width:100%;border-collapse:collapse;}
+    th,td{padding:10px;vertical-align:top;}
+    thead th{font-size:12px;opacity:.8;text-align:left;}
+    tbody tr{border-top:1px solid var(--line);}
+    .route{font-weight:900}
+    .sub{font-size:12px;opacity:.7;max-width:520px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .note{font-size:12px;opacity:.88;margin-top:4px;}
+    .topbar{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+    .pill{
+      display:inline-flex;gap:8px;align-items:center;
+      padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.03);
+      font-size:12px;opacity:.95;
+    }
+    .hr{height:14px;}
+    .error{color:#fca5a5}
+    .ok{color:#86efac}
+    code{background:rgba(255,255,255,.06);padding:2px 6px;border-radius:8px;}
+    @media (max-width: 900px){
+      .grid{grid-template-columns:repeat(2,1fr);}
+      .span6,.span5,.span4,.span3,.span2,.span1{grid-column:span 2 !important;}
+      table{font-size:13px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Aurora.AI</h1>
+      <span class="muted">single-file award search MVP</span>
+    </header>
+
+    <div class="hr"></div>
+
+    <div class="card">
+      <div class="grid">
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Mode</div>
+          <select id="mode">
+            <option value="mock">Mock (works now)</option>
+            <option value="api">API (calls /search + /verify)</option>
+          </select>
+        </div>
+
+        <div class="span4" style="grid-column:span 4;">
+          <div class="lab">API Base (only used in API mode)</div>
+          <input id="apiBase" placeholder="https://your-api.example.com" />
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Connector</div>
+          <select id="connector">
+            <option value="aeroplan">Aeroplan</option>
+            <option value="united">United</option>
+          </select>
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Origins (comma)</div>
+          <input id="origins" value="LAX,SFO" />
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Destinations (comma)</div>
+          <input id="destinations" value="CDG,AMS" />
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Cabin</div>
+          <select id="cabin">
+            <option value="economy">Economy</option>
+            <option value="premium_economy">Premium Econ</option>
+            <option value="business" selected>Business</option>
+            <option value="first">First</option>
+          </select>
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Start date</div>
+          <input id="startDate" type="date" />
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">End date</div>
+          <input id="endDate" type="date" />
+        </div>
+
+        <div class="span1" style="grid-column:span 1;">
+          <div class="lab">Seats</div>
+          <input id="seats" type="number" min="1" max="9" value="2" />
+        </div>
+
+        <div class="span1" style="grid-column:span 1;">
+          <div class="lab">Max stops</div>
+          <input id="maxStops" type="number" min="0" max="3" value="1" />
+        </div>
+
+        <div class="span2" style="grid-column:span 2;">
+          <div class="lab">Max taxes ($)</div>
+          <input id="maxTaxes" placeholder="e.g. 200" />
+        </div>
+
+        <div class="span6" style="grid-column:span 6;">
+          <div class="row">
+            <button id="searchBtn">Search awards</button>
+            <span id="status" class="muted">Tip: try LAX→CDG, 2 seats, business</span>
+            <span class="pill" title="In Mock mode, everything works with simulated data. In API mode, it calls your backend endpoints.">
+              <strong>Chrome-ready</strong> <span class="muted">via GitHub Pages</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="card2">
+      <div class="topbar">
+        <h2 style="margin:0;font-size:18px;">Results</h2>
+        <span class="muted"><span id="count">0</span> found</span>
+      </div>
+
+      <div style="height:10px;"></div>
+
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Program</th>
+              <th>Route</th>
+              <th>Cabin</th>
+              <th>Seats</th>
+              <th>Miles</th>
+              <th>Taxes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr>
+              <td colspan="8" class="muted" style="padding:16px;">No results yet. Run a search above.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="hr"></div>
+    <div class="muted" style="font-size:12px;">
+      Single-file MVP. Mock mode works instantly. API mode expects:
+      <code>/search</code> (POST) returning an array of results, and <code>/verify</code> (POST) returning one updated result.
+    </div>
+  </div>
+
+<script>
+/** ---------------------------
+ *  Utilities
+ *  --------------------------*/
+function $(id){ return document.getElementById(id); }
+function isoNow(){
+  const d = new Date();
+  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+function splitCodes(v){
+  return String(v || "")
+    .split(",")
+    .map(s => s.trim().toUpperCase())
+    .filter(Boolean);
+}
+function randChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function money(n){ return "$" + Number(n).toFixed(2); }
+function fmtNum(n){ return Number(n).toLocaleString(); }
+function statusBadge(status){
+  if(status === "verified") return `<span class="badge b-verified">VERIFIED</span>`;
+  if(status === "phantom") return `<span class="badge b-phantom">PHANTOM</span>`;
+  return `<span class="badge b-unverified">UNVERIFIED</span>`;
+}
+function parseDateInput(v){
+  // expects "YYYY-MM-DD"
+  if(!v) return null;
+  const parts = v.split("-");
+  if(parts.length !== 3) return null;
+  const y = Number(parts[0]), m = Number(parts[1])-1, d = Number(parts[2]);
+  const dt = new Date(Date.UTC(y,m,d,0,0,0));
+  if(Number.isNaN(dt.getTime())) return null;
+  return dt;
+}
+function randomUtcBetween(startUtc, endUtc){
+  const a = startUtc.getTime();
+  const b = endUtc.getTime();
+  const lo = Math.min(a,b);
+  const hi = Math.max(a,b);
+  const t = lo + Math.floor(Math.random() * Math.max(1, (hi - lo + 1)));
+  return new Date(t);
+}
+function toIsoZ(dt){
+  return dt.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+function addHours(dt, hours){
+  return new Date(dt.getTime() + hours*60*60*1000);
+}
+
+/** ---------------------------
+ *  Mock engine (works offline)
+ *  - FIXED: arrival always after departure
+ *  - FIXED: dates come from selected start/end range
+ *  --------------------------*/
+function mockSearch(payload){
+  const origins = splitCodes(payload.origins);
+  const destinations = splitCodes(payload.destinations);
+  const cabin = payload.cabin || "business";
+  const seatsReq = clamp(Number(payload.seats||1), 1, 9);
+  const maxStops = clamp(Number(payload.max_stops||2), 0, 3);
+  const maxTaxes = payload.max_taxes_usd == null ? null : Number(payload.max_taxes_usd);
+
+  const start = parseDateInput(payload.start_date) || new Date(Date.UTC(2026,0,1));
+  const endBase = parseDateInput(payload.end_date) || new Date(Date.UTC(2026,11,31));
+  // include the full end day by adding 23:59:59
+  const end = new Date(endBase.getTime() + (24*60*60*1000 - 1000));
+
+  const programs = {
+    aeroplan: "Aeroplan (Mock)",
+    united: "United (Mock)"
+  };
+  const programName = programs[payload.connector] || "Unknown (Mock)";
+
+  const out = [];
+  let i=0;
+
+  if(origins.length === 0 || destinations.length === 0){
+    return [];
+  }
+
+  for(const o of origins){
+    for(const d of destinations){
+      for(let k=0;k<10;k++){
+        const miles = randChoice([60000,70000,85000,95000,110000,125000]);
+        const taxes = Number(randChoice([52.30, 88.10, 120.45, 180.00, 350.25]).toFixed(2));
+        if(maxTaxes != null && taxes > maxTaxes) continue;
+
+        const stops = randChoice([0,1,1,2]);
+        if(stops > maxStops) continue;
+
+        // pick a random departure moment in range, at a "reasonable" hour
+        const baseDay = randomUtcBetween(start, end);
+        const depHour = randChoice([6,9,12,14,18,22]);
+        const dep = new Date(Date.UTC(
+          baseDay.getUTCFullYear(),
+          baseDay.getUTCMonth(),
+          baseDay.getUTCDate(),
+          depHour, 0, 0
+        ));
+
+        const segs = [];
+
+        if(stops === 0){
+          const duration = randChoice([7,8,9,10,11]); // hours
+          const arr = addHours(dep, duration);
+
+          segs.push({
+            marketing_carrier: randChoice(["AC","UA","LH","LX"]),
+            operating_carrier: null,
+            flight_number: String(Math.floor(Math.random()*9000)+10),
+            origin: o,
+            destination: d,
+            departure_utc: toIsoZ(dep),
+            arrival_utc: toIsoZ(arr),
+            aircraft: randChoice(["789","77W","359","388"])
+          });
+        } else {
+          const hub = randChoice(["YYZ","YUL","EWR","FRA","ZRH","IAD"]);
+
+          const dur1 = randChoice([2,3,4,5]); // hours
+          const arr1 = addHours(dep, dur1);
+
+          // layover 1–4 hours
+          const lay = randChoice([1,2,3,4]);
+          const dep2 = addHours(arr1, lay);
+
+          const dur2 = randChoice([2,3,4,5,6,7]); // hours
+          const arr2 = addHours(dep2, dur2);
+
+          segs.push({
+            marketing_carrier: randChoice(["AC","UA"]),
+            operating_carrier: null,
+            flight_number: String(Math.floor(Math.random()*9000)+10),
+            origin: o,
+            destination: hub,
+            departure_utc: toIsoZ(dep),
+            arrival_utc: toIsoZ(arr1),
+            aircraft: randChoice(["739","320","321","E75"])
+          });
+
+          segs.push({
+            marketing_carrier: randChoice(["AC","LH","LX","UA"]),
+            operating_carrier: null,
+            flight_number: String(Math.floor(Math.random()*9000)+10),
+            origin: hub,
+            destination: d,
+            departure_utc: toIsoZ(dep2),
+            arrival_utc: toIsoZ(arr2),
+            aircraft: randChoice(["789","359","77W","333"])
+          });
+        }
+
+        const id = `mock_${payload.connector}_${o}_${d}_${i++}_${miles}_${Math.round(taxes*100)}`;
+        out.push({
+          id,
+          program: programName,
+          cabin,
+          seats: Math.min(seatsReq, randChoice([1,2,2,4])),
+          miles,
+          taxes_usd: taxes,
+          currency: "USD",
+          segments: segs,
+          booking_url: payload.connector === "aeroplan"
+            ? "https://www.aircanada.com/aeroplan/redeem"
+            : "https://www.united.com/en/us/book-a-flight",
+          observed_at_utc: isoNow(),
+          verified_status: "unverified",
+          verification_note: null
+        });
+      }
+    }
+  }
+
+  out.sort((a,b)=> (a.miles-b.miles) || (a.taxes_usd-b.taxes_usd));
+  return out;
+}
+
+function mockVerify(result){
+  const r = JSON.parse(JSON.stringify(result));
+  const roll = Math.random();
+  if(roll < 0.75){
+    r.verified_status = "verified";
+    r.verification_note = "Verified (mock) — real-time check comes later.";
+  } else if (roll < 0.90){
+    r.verified_status = "unverified";
+    r.verification_note = "Inconclusive (mock) — retry soon.";
+  } else {
+    r.verified_status = "phantom";
+    r.verification_note = "Phantom (mock) — partner mismatch.";
+  }
+  r.observed_at_utc = isoNow();
+  return r;
+}
+
+/** ---------------------------
+ *  API mode calls (optional)
+ *  --------------------------*/
+async function apiPostJson(url, body){
+  const res = await fetch(url, {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const txt = await res.text();
+    throw new Error(txt || ("HTTP "+res.status));
+  }
+  return res.json();
+}
+
+/** ---------------------------
+ *  Rendering
+ *  --------------------------*/
+let RESULTS = [];
+
+function render(){
+  const tbody = $("tbody");
+  $("count").textContent = String(RESULTS.length);
+
+  if(RESULTS.length === 0){
+    tbody.innerHTML = `<tr><td colspan="8" class="muted" style="padding:16px;">No results yet. Run a search above.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = RESULTS.map(r=>{
+    const route = `${r.segments[0]?.origin} → ${r.segments[r.segments.length-1]?.destination}`;
+    const segs = r.segments.map(s => `${s.marketing_carrier}${s.flight_number} ${s.origin}-${s.destination}`).join(" • ");
+    const note = r.verification_note ? `<div class="note">${escapeHtml(r.verification_note)}</div>` : "";
+    return `
+      <tr>
+        <td>${statusBadge(r.verified_status)}</td>
+        <td>
+          <div style="font-weight:900;">${escapeHtml(r.program)}</div>
+          <div class="sub">${escapeHtml(r.observed_at_utc)}</div>
+        </td>
+        <td>
+          <div class="route">${escapeHtml(route)}</div>
+          <div class="sub" title="${escapeHtml(segs)}">${escapeHtml(segs)}</div>
+          ${note}
+        </td>
+        <td>${escapeHtml(r.cabin)}</td>
+        <td>${escapeHtml(String(r.seats))}</td>
+        <td style="font-weight:900;">${escapeHtml(fmtNum(r.miles))}</td>
+        <td>${escapeHtml(money(r.taxes_usd))}</td>
+        <td style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-ghost" data-verify="${escapeHtml(r.id)}">Verify</button>
+          ${r.booking_url ? `<a class="btn-ghost" href="${escapeAttr(r.booking_url)}" target="_blank" rel="noreferrer" style="text-decoration:none;">Book</a>` : ""}
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  [...document.querySelectorAll("[data-verify]")].forEach(btn=>{
+    btn.addEventListener("click", async (e)=>{
+      const id = e.currentTarget.getAttribute("data-verify");
+      const r = RESULTS.find(x => x.id === id);
+      if(!r) return;
+      await verifyOne(r);
+    });
+  });
+}
+
+function escapeHtml(s){
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function escapeAttr(s){
+  return String(s).replaceAll('"', "%22");
+}
+
+/** ---------------------------
+ *  Actions
+ *  --------------------------*/
+async function runSearch(){
+  const mode = $("mode").value;
+  const connector = $("connector").value;
+
+  const payload = {
+    connector,
+    origins: $("origins").value,
+    destinations: $("destinations").value,
+    start_date: $("startDate").value,
+    end_date: $("endDate").value,
+    cabin: $("cabin").value,
+    seats: Number($("seats").value || 1),
+    max_stops: Number($("maxStops").value || 1),
+    max_taxes_usd: $("maxTaxes").value.trim() === "" ? null : Number($("maxTaxes").value)
+  };
+
+  setStatus("Searching...", "muted");
+  $("searchBtn").disabled = true;
+
+  try{
+    if(mode === "mock"){
+      RESULTS = mockSearch(payload);
+    } else {
+      const base = $("apiBase").value.trim().replace(/\/+$/,"");
+      if(!base) throw new Error("API Base is required in API mode.");
+      RESULTS = await apiPostJson(`${base}/search`, payload);
+    }
+    setStatus(`Done. ${RESULTS.length} results.`, RESULTS.length ? "ok" : "muted");
+  } catch(err){
+    RESULTS = [];
+    setStatus(String(err.message || err), "error");
+  } finally {
+    $("searchBtn").disabled = false;
+    render();
+  }
+}
+
+async function verifyOne(result){
+  const mode = $("mode").value;
+  const connector = $("connector").value;
+
+  setStatus("Verifying...", "muted");
+  try{
+    let updated;
+    if(mode === "mock"){
+      updated = mockVerify(result);
+    } else {
+      const base = $("apiBase").value.trim().replace(/\/+$/,"");
+      if(!base) throw new Error("API Base is required in API mode.");
+      updated = await apiPostJson(`${base}/verify`, { connector, result });
+    }
+    RESULTS = RESULTS.map(x => x.id === updated.id ? updated : x);
+    setStatus(`Verified: ${updated.verified_status.toUpperCase()}`, updated.verified_status === "phantom" ? "error" : "ok");
+    render();
+  } catch(err){
+    setStatus(`Verify failed: ${String(err.message || err)}`, "error");
+  }
+}
+
+function setStatus(text, kind){
+  const el = $("status");
+  el.textContent = text;
+  el.className = kind === "error" ? "error"
+             : kind === "ok" ? "ok"
+             : "muted";
+}
+
+/** ---------------------------
+ *  Init defaults
+ *  --------------------------*/
+(function init(){
+  // Set default date range: today → +30d (UTC-safe)
+  const today = new Date();
+  const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0));
+  const end = new Date(start.getTime() + 30*24*60*60*1000);
+
+  const toYMD = (dt) => {
+    const y = dt.getUTCFullYear();
+    const m = String(dt.getUTCMonth()+1).padStart(2,"0");
+    const d = String(dt.getUTCDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  };
+
+  $("startDate").value = toYMD(start);
+  $("endDate").value = toYMD(end);
+
+  $("apiBase").value = localStorage.getItem("AURORA_API_BASE") || "";
+
+  $("mode").addEventListener("change", ()=>{
+    const mode = $("mode").value;
+    if(mode === "api"){
+      setStatus("API mode: set API Base and search.", "muted");
+    } else {
+      setStatus("Mock mode: works instantly.", "muted");
+    }
+  });
+
+  $("apiBase").addEventListener("input", ()=>{
+    localStorage.setItem("AURORA_API_BASE", $("apiBase").value.trim());
+  });
+
+  $("searchBtn").addEventListener("click", runSearch);
+
+  render();
+})();
+</script>
+</body>
+</html>
